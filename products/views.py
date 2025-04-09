@@ -6,6 +6,7 @@ from rest_framework import status
 from products.models import Products
 from products.serializers import ProductSerializer
 from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q  # To handle complex filters
 
 from django.db import transaction
 
@@ -54,3 +55,25 @@ def get_product(request, id):
     # Sends the serialized product data as an API response.
     return Response(serialized_data)
 
+@api_view(['GET'])
+def filter_products(request):
+    # Get filter parameters from the query string
+    min_price = request.query_params.get('min_price', None)
+    max_price = request.query_params.get('max_price', None)
+    description = request.query_params.get('description', None)
+
+    # Build dynamic filters using Q objects
+    filter_query = Q()
+    if min_price:
+        filter_query &= Q(price__gte=min_price)  # Filter by minimum price
+    if max_price:
+        filter_query &= Q(price__lte=max_price)  # Filter by maximum price
+    if description:
+        filter_query &= Q(description__icontains=description)  # Filter by description keyword
+
+    # Fetch filtered products from the database
+    filtered_products = Products.objects.filter(filter_query)
+    serialized_products = ProductSerializer(filtered_products, many=True)
+
+    # Return the response with filtered data
+    return Response(serialized_products.data, status=status.HTTP_200_OK)
