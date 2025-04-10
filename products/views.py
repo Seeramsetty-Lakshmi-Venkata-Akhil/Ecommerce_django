@@ -57,23 +57,41 @@ def get_product(request, id):
 
 @api_view(['GET'])
 def filter_products(request):
-    # Get filter parameters from the query string
-    min_price = request.query_params.get('min_price', None)
-    max_price = request.query_params.get('max_price', None)
-    description = request.query_params.get('description', None)
+    # Extract 'description' and 'name' filters from query parameters
+    name = request.query_params.get('name',None)   # Extract product name
+    description = request.query_params.get('description', None) # Extract description
+    # adding the validations for name to check name parameter cannot be Empty.
+    if name is not None:  # Check if the name parameter exists
+        if not name.strip() or name in ['""', "''", "None"]:  # Check if it's empty or invalid
+            return Response({'error': 'Product name cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+    # print(f"name: {repr(name)}", type(name))  # Use repr() to see if it's None or an empty string
 
-    # Build dynamic filters using Q objects
+    try:
+        # Extract 'min_price' and 'max_price' from query parameters and convert them to float
+        # If conversion fails, raise a validation error to inform the user
+        min_price = float(request.query_params.get('min_price')) if request.query_params.get('min_price') else None
+        max_price = float(request.query_params.get('max_price')) if request.query_params.get('max_price') else None
+    except ValueError:
+        # Return an error response if the price parameters are not numeric
+        return Response({'error': 'Price parameters must be numeric.'}, status=status.HTTP_400_BAD_REQUEST)
+    if min_price and max_price and min_price > max_price: #validation for the Prices
+        return Response({'error': 'Minimum price cannot be greater than maximum price.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Initialize an empty filter using Q objects to dynamically combine conditions
     filter_query = Q()
+    if name:   # Add a condition to filter products by name
+        filter_query &= Q(name__icontains=name)
+    # add a condition to filter based on Description and Skip filtering by description if it's empty
+    if description and not description.strip():
+        filter_query &= Q(description__icontains=description)
     if min_price:
-        filter_query &= Q(price__gte=min_price)  # Filter by minimum price
+        filter_query &= Q(price__gte=min_price)  #Products with price >= min_price
     if max_price:
-        filter_query &= Q(price__lte=max_price)  # Filter by maximum price
-    if description:
-        filter_query &= Q(description__icontains=description)  # Filter by description keyword
+        filter_query &= Q(price__lte=max_price)  #Products with price <= max_price
 
-    # Fetch filtered products from the database
+    # Fetch products from the database that match the constructed filter query
     filtered_products = Products.objects.filter(filter_query)
+    # Serialize the filtered products to convert them into a JSON-friendly format
     serialized_products = ProductSerializer(filtered_products, many=True)
-
     # Return the response with filtered data
     return Response(serialized_products.data, status=status.HTTP_200_OK)
