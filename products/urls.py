@@ -11,4 +11,6 @@ urlpatterns = [
     # Maps the 'get_product' view to retrieve a specific product based on its ID.
     path('products/<int:id>/', views.get_product),
     path("filter_products/", views.filter_products, name="filter_products"),
+    path("update_product/<int:id>", views.update_product, name="update_product"),
+    path("delete_product/<int:id>/", views.delete_product, name="delete_product"),
 ]

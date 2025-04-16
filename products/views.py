@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.http import  HttpResponse
+from django.views.generic import DeleteView
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -46,14 +47,17 @@ def create_r_get_products(request):
 
 @api_view(['GET'])
 def get_product(request, id):
-    # Retrieves a single product based on the provided ID.
-    data = Products.objects.get(id=id)
-    # Serializes the specific product data into a format suitable for JSON responses.
-    serialized_products = ProductSerializer(data)
-    # Extracts the serialized product data (in JSON format).
-    serialized_data = serialized_products.data
-    # Sends the serialized product data as an API response.
-    return Response(serialized_data)
+    try:
+        # Retrieves a single product based on the provided ID.
+        data = Products.objects.get(id=id)
+        # Serializes the specific product data into a format suitable for JSON responses.
+        serialized_products = ProductSerializer(data)
+        # Extracts the serialized product data (in JSON format).
+        serialized_data = serialized_products.data
+        # Sends the serialized product data as an API response.
+        return Response(serialized_data)
+    except Products.DoesNotExist:
+        return Response({'error': 'Product not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
 def filter_products(request):
@@ -95,3 +99,32 @@ def filter_products(request):
     serialized_products = ProductSerializer(filtered_products, many=True)
     # Return the response with filtered data
     return Response(serialized_products.data, status=status.HTTP_200_OK)
+
+
+#PATCH allows partial updates where we only update specific fields without affecting others.
+@api_view(['PATCH'])
+def update_product(request, id):
+    try:
+        product = Products.objects.get(id=id)  # Get the product
+        serialized_product = ProductSerializer(product, data=request.data, partial=True)  # Allow partial updates
+
+        if serialized_product.is_valid():
+            serialized_product.save()  # Save changes
+            return Response(serialized_product.data, status=status.HTTP_200_OK)
+
+        return Response(serialized_product.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    except Products.DoesNotExist:
+        return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+@api_view(['DELETE'])
+def delete_product(request, id):
+    try:
+        product = Products.objects.get(id=id)  # Fetch product by ID
+        product.delete()  # Delete the product from the database
+        return Response({'message': 'Product deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+    except Products.DoesNotExist:
+        return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
