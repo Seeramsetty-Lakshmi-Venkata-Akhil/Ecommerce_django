@@ -25,9 +25,9 @@ SECRET_KEY = 'django-insecure-i864@w8#+s_o$bt5ck*c&rwg#vwcbk7)(@sl3mizvw%@5by%3m
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    '15.206.80.52',  # Your EC2 Public IPv4 address
-    'ec2-15-206-80-52.ap-south-1.compute.amazonaws.com',  # EC2 Public DNS
+ALLOWED_HOSTS = ['*'
+    # '15.206.80.52',  # Your EC2 Public IPv4 address
+    # 'ec2-15-206-80-52.ap-south-1.compute.amazonaws.com',  # EC2 Public DNS
 ]
 
 
