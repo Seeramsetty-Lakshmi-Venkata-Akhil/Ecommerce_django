@@ -10,5 +10,12 @@
       <jdbc-url>jdbc:sqlite:F:\Scaler\django_project\db.sqlite3</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="product@db.c3w0ekw6ezn8.ap-south-1.rds.amazonaws.com" uuid="9fd8140b-8ee0-4747-943d-b659e10c6424">
+      <driver-ref>mysql.8</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>
+      <jdbc-url>jdbc:mysql://db.c3w0ekw6ezn8.ap-south-1.rds.amazonaws.com:3306/product</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>
