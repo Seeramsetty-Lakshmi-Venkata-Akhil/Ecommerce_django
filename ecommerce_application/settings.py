@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-i864@w8#+s_o$bt5ck*c&rwg#vwcbk7)(@sl3mizvw%@5by%3m
 DEBUG = True
 
 ALLOWED_HOSTS = ['*',
-                 "django-env-8.eba-hpub3pz9.us-west-2.elasticbeanstalk.com",
+                 "django-env-4.eba-hpub3pz9.us-west-2.elasticbeanstalk.com",
     # '15.206.80.52',  # Your EC2 Public IPv4 address
     # 'ec2-15-206-80-52.ap-south-1.compute.amazonaws.com',  # EC2 Public DNS
 ]
