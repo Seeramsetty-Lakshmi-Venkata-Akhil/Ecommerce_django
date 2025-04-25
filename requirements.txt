@@ -1,4 +1,4 @@
 Django==5.2
 djangorestframework==3.14.0
-mysqlclient==2.2.0  # Works with Python 3.11
+pymysql==1.1.0
 gunicorn==20.1.0
