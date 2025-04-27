@@ -165,7 +165,7 @@ class OrderDetailView(APIView):
         order = self.get_object(pk)
         if not order:
             return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = OrderSerializer(order)
+        serializer = OrderSerializer(order, context= {'request': request}) #passing request to serializer for dis &tax
         return Response(serializer.data)
 
     def patch(self, request, pk):
