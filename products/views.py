@@ -104,7 +104,7 @@ def filter_products(request):
     return Response(serialized_products.data, status=status.HTTP_200_OK)
 
 
-#PATCH allows partial updates where we only update specific fields without affecting others.
+#PATCH allows partial updates without affecting others, and also can update fully.
 @api_view(['PATCH'])
 def update_product(request, id):
     try:
@@ -168,12 +168,12 @@ class OrderDetailView(APIView):
         serializer = OrderSerializer(order)
         return Response(serializer.data)
 
-    def put(self, request, pk):
-        # Update an existing order
+    def patch(self, request, pk):
+        # Update an existing order partially or fully
         order = self.get_object(pk)
         if not order:
             return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = OrderSerializer(order, data=request.data)
+        serializer = OrderSerializer(order, data=request.data, partial=True) # Important: partial=True
         if serializer.is_valid():
             serializer.save()  # Save the updated order
             return Response(serializer.data)
