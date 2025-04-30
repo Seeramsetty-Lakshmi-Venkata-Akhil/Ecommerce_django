@@ -17,9 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.urls import include
+
+import payments
 from products import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('products.urls')),
+    path('api/products/', include('products.urls')),
+    path("api/orders/", include('orders.urls')),
+    path("api/payments/", include('payments.urls')),
 ]

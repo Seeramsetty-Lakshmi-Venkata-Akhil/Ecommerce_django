@@ -1,85 +1,89 @@
-from django.db import models
-from django.db.models import SET_NULL
-from django.utils.timezone import datetime
-from decimal import Decimal
+from django.db import models  # Importing Django's model library for database ORM operations
 
-# Create your models here.
+class User(models.Model):
+    # Represents a user/customer in the system
+    name = models.CharField(
+        max_length=100  # Limits the length of the name to 100 characters
+    )
+    def __str__(self):
+        # Returns the user's name when displaying instances in admin or debugging
+        return self.name
+
+
 class AuditData(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True)  # Set only once at creation
-    updated_at = models.DateTimeField(auto_now=True)      # Update automatically on save
+    """
+    Base model to automatically track creation and update timestamps.
+    Provides reusable fields for other models to inherit from.
+    """
+    created_at = models.DateTimeField(
+        auto_now_add=True,  # Automatically sets to current datetime when the record is created
+        verbose_name="Created At",  # Label for admin and UI
+        help_text="The date and time when this record was first created"  # Helps explain field usage
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,  # Updates the datetime to now whenever the record is modified
+        verbose_name="Updated At",  # Label for admin and UI
+        help_text="The date and time when this record was last updated"  # Helps explain field usage
+    )
+
     class Meta:
-        abstract = True
+        abstract = True  # Ensures this model is not represented as a database table
 
 
-class User(AuditData):   # Inherit from AuditData
-    name = models.CharField(max_length=100)
+class Category(AuditData):
+    """
+    Represents product categories (e.g., Electronics, Clothing).
+    Inherits timestamp fields from AuditData.
+    """
+    name = models.CharField(
+        max_length=100,  # Restricts the category name to 100 characters
+        unique=True  # Enforces uniqueness to prevent duplicate category names
+    )
+
     def __str__(self):
-        # useful for displaying meaningful information in Django Admin and debugging.
+        # Returns the category name when displaying instances in admin or debugging
         return self.name
 
 
-class Category(AuditData):   # Inherit from AuditData):
-    name = models.CharField(max_length=100)
-    def __str__(self):
-        return self.name
-
-class Products(AuditData):   # Inherit from AuditData
-    name = models.CharField(max_length=100)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    description = models.TextField(blank=True)
-    is_available = models.BooleanField(default=True)
-    category = models.ForeignKey('Category', on_delete=models.SET_NULL,related_name='products',null=True) #Allows NULL values in the database
+class Products(AuditData):
+    """
+    Represents a sellable item in the e-commerce platform.
+    Tracks product attributes like name, price, availability, and stock.
+    """
+    name = models.CharField(
+        max_length=100,  # Restricts the product name to 100 characters
+        help_text="The name of the product"  # Provides clarity about the field's purpose
+    )
+    price = models.DecimalField(
+        max_digits=10,  # Allows up to 10 digits in total (including before and after the decimal point)
+        decimal_places=2,  # Restricts the price to 2 decimal places for monetary values
+        help_text="Current selling price (₹)"  # Clarifies the field represents the product's price
+    )
+    description = models.TextField(
+        blank=True,  # Makes this field optional (empty values allowed)
+        help_text="Optional description of the product"  # Explains what this field contains
+    )
+    is_available = models.BooleanField(
+        default=True,  # Sets the default value to available
+        help_text="Toggle to make the product available or unavailable for orders"  # Provides clarity about the field's usage
+    )
+    category = models.ForeignKey(
+        Category,  # Establishes a many-to-one relationship with Category model
+        on_delete=models.SET_NULL,  # Sets the category to null if the referenced category is deleted
+        null=True,  # Allows this field to be empty
+        blank=True,  # Makes this field optional in forms
+        related_name='products',  # Enables reverse lookup from Category to its Products (e.g., category.products)
+        help_text="Category this product belongs to"  # Explains what this field represents
+    )
+    stock_quantity = models.PositiveIntegerField(
+        default=0,  # Sets default stock to 0
+        verbose_name="Stock Quantity",  # Label for admin and UI
+        help_text="Tracks the number of units available in inventory"  # Clarifies the field's purpose
+    )
 
     class Meta:
-        verbose_name_plural = "Products"  # Correct plural form
+        ordering = ['-created_at']  # Displays newest products first in query results
 
     def __str__(self):
-        return f"{self.name} - ₹{self.price}"
-
-
-class Order(AuditData):  # Inherit created_at and updated_at fields from AuditData
-    # Define possible order statuses using Django's TextChoices
-    class OrderStatus(models.TextChoices):
-        PENDING = 'pending', 'Pending'  # Order created but not yet paid
-        SUCCESS = 'success', 'Success'  # Payment successful
-        FAILED = 'failed', 'Failed'      # Payment failed
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
-    # User who placed the order
-    products = models.ManyToManyField(Products, through='OrderProduct', related_name='orders')
-    # Products included in the order (with quantity tracking)
-    order_status = models.CharField(max_length=10, choices=OrderStatus.choices, default=OrderStatus.PENDING)
-    # Current status of the order (pending/success/failed)
-
-    def total_bill(self, discount=0, tax=0):
-        """
-        Calculates the total bill amount for the order.
-        - Adds price * quantity for each product.
-        - Applies optional discount (%) and tax (%).
-        Returns the final payable amount as Decimal.
-        """
-        total = Decimal('0')
-        # Sum up (price * quantity) for all ordered products
-        for order_product in self.order_products.all():
-            total += order_product.product.price * order_product.quantity
-        # Apply discount if any
-        if discount:
-            total -= (total * Decimal(discount) / Decimal('100'))
-        # Apply tax if any
-        if tax:
-            total += (total * Decimal(tax) / Decimal('100'))
-        return total
-
-    def __str__(self):
-        product_names = ", ".join([product.name for product in self.products.all()])
-        return f"Order #{self.id} by {self.user.name} - Products: {product_names}"
-
-
-class OrderProduct(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_products')
-    product = models.ForeignKey(Products, on_delete=models.CASCADE, related_name='order_products')
-    quantity = models.PositiveIntegerField(default=1)  # Track product quantity
-
-    def __str__(self):
-        return f"Order #{self.order.id} - {self.product.name} x {self.quantity}"
-
+        # Returns a meaningful representation of the product for admin or debugging
+        return f"{self.name} (₹{self.price})"

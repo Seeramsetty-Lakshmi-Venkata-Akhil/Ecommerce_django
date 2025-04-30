@@ -6,9 +6,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from products.models import Products
-from products.models import Order
 from products.serializers import ProductSerializer
-from products.serializers import OrderSerializer
+# from products.serializers import OrderSerializer
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q  # To handle complex filters
 
@@ -60,7 +59,8 @@ def get_product(request, id):
         # Sends the serialized product data as an API response.
         return Response(serialized_data)
     except Products.DoesNotExist:
-        return Response({'error': 'Product not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': f'Product with ID {id} does not exist.'}, status=status.HTTP_404_NOT_FOUND)
+
 
 @api_view(['GET'])
 def filter_products(request):
@@ -133,56 +133,3 @@ def delete_product(request, id):
         return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
-#Class based Orders Views
-
-# View to list all orders or create a new order
-class OrderListCreateView(APIView):
-    def get(self, request):
-        # Fetch all orders
-        orders = Order.objects.all()
-        serializer = OrderSerializer(orders, many=True)
-        return Response(serializer.data)
-
-    def post(self, request):
-        # Create a new order with request data
-        serializer = OrderSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()  # Save new order to database
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# View to retrieve, update, or delete a single order
-class OrderDetailView(APIView):
-    def get_object(self, pk):
-        # Helper method to get the order by primary key (id)
-        try:
-            return Order.objects.get(pk=pk)
-        except Order.DoesNotExist:
-            return None
-
-    def get(self, request, pk):
-        # Retrieve a single order
-        order = self.get_object(pk)
-        if not order:
-            return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = OrderSerializer(order, context= {'request': request}) #passing request to serializer for dis &tax
-        return Response(serializer.data)
-
-    def patch(self, request, pk):
-        # Update an existing order partially or fully
-        order = self.get_object(pk)
-        if not order:
-            return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = OrderSerializer(order, data=request.data, partial=True) # Important: partial=True
-        if serializer.is_valid():
-            serializer.save()  # Save the updated order
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk):
-        # Delete an order
-        order = self.get_object(pk)
-        if not order:
-            return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
-        order.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
