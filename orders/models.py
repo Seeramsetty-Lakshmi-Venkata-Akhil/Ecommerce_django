@@ -56,6 +56,8 @@ class Order(AuditData):
         """
         PENDING = 'pending', 'Pending Confirmation'  # Waiting for customer confirmation
         CONFIRMED = 'confirmed', 'Confirmed'  # Order is confirmed and ready for processing
+        PARTIAL = 'partial', 'Partially Paid'  # Added for partial payments
+        PAID = 'paid', 'Fully Paid'            #  Explicitly track paid orders
         DELIVERED = 'delivered', 'Delivered'  # Order has been successfully delivered
         CANCELLED = 'cancelled', 'Cancelled'  # Order was cancelled
         RETURNED = 'returned', 'Returned'  # Order was returned by the customer
@@ -128,6 +130,15 @@ class Order(AuditData):
         default=0,  # Initializes the field with a value of 0
         verbose_name="Total Amount",  # User-friendly name shown in the admin interface
         help_text="Final amount after all adjustments"  # Explains what this field represents
+    )
+
+    paid_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,  # Ensures new orders start with 0 paid amount
+        validators=[MinValueValidator(0)],
+        verbose_name="Paid Amount",
+        help_text="Total amount paid towards this order"
     )
 
     # Status Tracking

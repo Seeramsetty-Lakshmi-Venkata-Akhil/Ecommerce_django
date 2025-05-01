@@ -23,6 +23,9 @@ class OrderProductSerializer(serializers.ModelSerializer):
         fields = ['product_id', 'product_name', 'quantity', 'price_at_purchase']  # Fields to include in serialization
         read_only_fields = ['price_at_purchase', 'product_name']  # Read-only fields cannot be modified
 
+
+
+
 # Main serializer for the Order model
 class OrderSerializer(serializers.ModelSerializer):
     """
