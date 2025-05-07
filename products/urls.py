@@ -2,6 +2,7 @@ from django.urls import path
 
 import products
 from products import views
+from .views import PageViewSet
 # from products.views import OrderDetailView, OrderListCreateView
 #
 urlpatterns = [
@@ -14,6 +15,8 @@ urlpatterns = [
     path("filter_products/", views.filter_products, name="filter_products"),
     path("update_product/<int:id>", views.update_product, name="update_product"),
     path("delete_product/<int:id>/", views.delete_product, name="delete_product"),
+    path("filter_products_wth_pagination/", PageViewSet.as_view(), name="filter_products"),
+
 #     path('orders/', OrderListCreateView.as_view(), name='order-list-create'), #List/Create orders (Class Based)
 #     path('orders/<int:pk>/', OrderDetailView.as_view(), name='order-detail'), #Retrieve/Update/Delete order (Class Based)
 ]

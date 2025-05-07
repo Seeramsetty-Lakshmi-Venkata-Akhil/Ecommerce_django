@@ -1,7 +1,10 @@
+from Demos.mmapfile_demo import page_size
+from django.core.cache import cache
 from django.shortcuts import render
 from django.http import  HttpResponse
 from django.views.generic import DeleteView
 from rest_framework.decorators import api_view
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -10,6 +13,8 @@ from products.serializers import ProductSerializer
 # from products.serializers import OrderSerializer
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q  # To handle complex filters
+import logging
+logger = logging.getLogger(__name__)  # Logger for debugging errors
 
 from django.db import transaction
 
@@ -50,14 +55,21 @@ def create_r_get_products(request):
 @api_view(['GET'])
 def get_product(request, id):
     try:
-        # Retrieves a single product based on the provided ID.
+        #first checking the cache before retrieving data from the db
+        cache_key = f'products_{id}'
+        data = cache.get(cache_key)
+        if data:
+            return Response(data, status=status.HTTP_200_OK)
+
+        # Retrieves a single product based on the provided ID from the DB
         data = Products.objects.get(id=id)
         # Serializes the specific product data into a format suitable for JSON responses.
         serialized_products = ProductSerializer(data)
         # Extracts the serialized product data (in JSON format).
         serialized_data = serialized_products.data
-        # Sends the serialized product data as an API response.
-        return Response(serialized_data)
+        #setting the serialized data as the value of the cache key
+        cache.set(cache_key, serialized_data)
+        return Response(serialized_data) ## Sends the serialized product data as an API response.
     except Products.DoesNotExist:
         return Response({'error': f'Product with ID {id} does not exist.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -87,7 +99,7 @@ def filter_products(request):
     # Initialize an empty filter using Q objects to dynamically combine conditions
     filter_query = Q()
     if name:   # Add a condition to filter products by name
-        filter_query &= Q(name__icontains=name)
+        filter_query &= Q(name__icontains=name)   #&= means and query was getting constructed
     # add a condition to filter based on Description and Skip filtering by description if it's empty
     if description and not description.strip():
         filter_query &= Q(description__icontains=description)
@@ -121,7 +133,6 @@ def update_product(request, id):
         return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
-
 @api_view(['DELETE'])
 def delete_product(request, id):
     try:
@@ -132,4 +143,44 @@ def delete_product(request, id):
     except Products.DoesNotExist:
         return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
 
+
+
+# ✅ Custom paginator to control page size limits
+class ProductPaginator(PageNumberPagination):
+    page_size = 10  # Default number of products per page
+    page_size_query_param = 'page_size'  # Allows dynamic resizing via query params
+    max_page_size = 50  # Prevents excessive data requests that could slow down the server
+
+# ✅ API View get the filtered products with Post request and pagination applied
+class PageViewSet(APIView):
+
+    def post(self, request):
+        # 🎯 Get search query and sorting preference from request body
+        query = request.data.get("query", "")
+        order_by = request.data.get("order_by", "-created_at")
+
+        # 🛠 Validate ordering field to prevent unexpected errors
+        valid_ordering = {"created_at", "name", "price", "-created_at", "-name", "-price"}
+        if order_by not in valid_ordering:
+            order_by = "-created_at"  # Default fallback
+
+        # 🔍 Build filtering query using Q() for flexibility
+        filters = Q()
+        if query:
+            filters |= Q(name__icontains=query) | Q(description__icontains=query)  # Case-insensitive search on name & description
+
+        # 📦 Fetch filtered and sorted products from the database
+        queryset = Products.objects.filter(filters).order_by(order_by)
+
+        # 🔢 Apply pagination with error handling in this post request to get the data
+        paginator = ProductPaginator()
+        try:
+            result = paginator.paginate_queryset(queryset, request)
+        except Exception as e:
+            self.logger.error(f"Pagination error: {e}")
+            return Response({"error": "Invalid pagination parameters"}, status=400)
+
+        # 📝 Serialize results before returning
+        serializer = ProductSerializer(result, many=True)
+        return paginator.get_paginated_response(serializer.data)
 

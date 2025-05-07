@@ -31,7 +31,12 @@ ALLOWED_HOSTS = ['*',
     # 'ec2-15-206-80-52.ap-south-1.compute.amazonaws.com',  # EC2 Public DNS
 ]
 
-
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+    }
+}
 
 # Application definition
 
